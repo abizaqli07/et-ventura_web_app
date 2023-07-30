@@ -1,5 +1,6 @@
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { ROLES } from "@prisma/client";
+import { compare } from 'bcrypt';
 import { type GetServerSidePropsContext } from "next";
 import {
   getServerSession,
@@ -61,10 +62,28 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password", placeholder: "Password" },
       },
       async authorize(credentials, req) {
-        const user = { id: "1", name: "User1", email: "user1@user.com", password: "user123", role: ROLES.ENTREPRENEUR }
+        const user = await prisma.user.findUnique({
+          where: {
+            email: credentials?.email
+          }
+        })
 
-        if (credentials?.email != user.email && credentials?.password != user.password) {
-          return null
+        if (!user) {
+          throw new Error("User not found!")
+        }
+
+        if (!user.password) {
+          throw new Error("You're not configured password yet")
+        }
+
+        if (!credentials) {
+          throw new Error("Something went wrong")
+        }
+
+        const passwordMatch = await compare(credentials.password, user.password)
+
+        if (!passwordMatch) {
+          throw new Error(" Email and password doest match")
         }
 
         return user
@@ -87,6 +106,10 @@ export const authOptions: NextAuthOptions = {
     }
   },
   secret: env.NEXTAUTH_SECRET,
+  pages: {
+    signIn: "/auth/login",
+    error: "/auth/login"
+  }
 };
 
 /**

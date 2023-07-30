@@ -1,22 +1,49 @@
 import { zodResolver } from "@hookform/resolvers/zod"
+import { signIn } from "next-auth/react"
+import Link from "next/link"
+import { useRouter } from "next/router"
 import { useForm } from "react-hook-form"
+import toast from "react-hot-toast"
 import { z } from "zod"
-import { LoginSchema } from "~/components/types/login"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "~/components/ui/form"
+import { RegisterSchema } from "~/components/types/user_auth"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "~/components/ui/form"
 import { Input } from "~/components/ui/input"
+import { api } from "~/utils/api"
 
-const Login = () => {
+const Register = () => {
+  const router = useRouter();
+  const register = api.auth.register.useMutation({
+    async onSuccess(data, variables, context) {
+      const result = await signIn("credentials", {
+        email: data.email,
+        password: variables.password,
+        redirect: false,
+      }).then((callback) => {
+        if (callback?.error) {
+          toast.error(callback.error)
+        }
 
-  const form = useForm<z.infer<typeof LoginSchema>>({
-    resolver: zodResolver(LoginSchema),
-    defaultValues: {
-      email: "",
-      password: ""
+        if (callback?.ok && !callback.error) {
+          router.push("/auth/register_profile").catch((e) => console.log(e))
+        }
+      });
+    },
+    onError(error) {
+      toast.error(error.message)
     },
   })
 
-  function onSubmit(values: z.infer<typeof LoginSchema>) {
-    console.log(values)
+  const form = useForm<z.infer<typeof RegisterSchema>>({
+    resolver: zodResolver(RegisterSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+      confirmPassword: ""
+    },
+  })
+
+  async function onSubmit(values: z.infer<typeof RegisterSchema>) {
+    register.mutate(values)
   }
 
   return (
@@ -29,7 +56,7 @@ const Login = () => {
             alt="Your Company"
           />
           <h2 className="mt-10 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">
-            Sign in to your account
+            Create your account
           </h2>
         </div>
 
@@ -45,7 +72,7 @@ const Login = () => {
                       <FormLabel>Email address</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="shadcn"
+                          placeholder="Your email"
                           autoComplete="email" {...field}
                         />
                       </FormControl>
@@ -64,7 +91,29 @@ const Login = () => {
                       <FormLabel>Password</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="shadcn"
+                          type="password"
+                          placeholder="Password"
+                          autoComplete="current-password"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div>
+                <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Confirm Password</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="Password"
                           autoComplete="current-password"
                           {...field}
                         />
@@ -80,17 +129,17 @@ const Login = () => {
                   type="submit"
                   className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
                 >
-                  Sign in
+                  Sign up
                 </button>
               </div>
             </form>
           </Form>
 
           <p className="mt-10 text-center text-sm text-gray-500">
-            Not registered yet?{' '}
-            <a href="#" className="font-semibold leading-6 text-indigo-600 hover:text-indigo-500">
-              Start your business journey
-            </a>
+            Already have account?{' '}
+            <Link href="/auth/login" className="font-semibold leading-6 text-indigo-600 hover:text-indigo-500">
+              Sign in
+            </Link>
           </p>
         </div>
       </div>
@@ -98,4 +147,4 @@ const Login = () => {
   )
 }
 
-export default Login
+export default Register

@@ -7,5 +7,5 @@ import { homeRouter } from "./home";
  * All routers added in /api/routers should be manually added here.
  */
 export const clientRouter = createTRPCRouter({
-  example: homeRouter,
+  home: homeRouter,
 });

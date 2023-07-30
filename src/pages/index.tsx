@@ -1,6 +1,7 @@
 import { signIn, signOut, useSession } from "next-auth/react";
 import Head from "next/head";
 import Link from "next/link";
+import { Button } from "~/components/ui/button";
 import { api } from "~/utils/api";
 
 export default function Home() {
@@ -18,7 +19,8 @@ export default function Home() {
       </Head>
       <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c]">
         <div>Home</div>
-        <Link href={"/login"}>Login</Link>
+        <Link href={"/auth/login"}>Login</Link>
+        <Button onClick={() => void signOut()}>Sign Out</Button>
       </main>
     </>
   );
