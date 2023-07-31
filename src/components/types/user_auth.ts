@@ -1,3 +1,4 @@
+import { ROLES } from "@prisma/client"
 import * as z from "zod"
 
 const LoginSchema = z.object({
@@ -40,10 +41,14 @@ const RegisterProfileSchema = z.object({
   address: z.string(),
   city: z.string(),
   country: z.string(),
+  postCode: z.string().max(10, {
+    message: "Postal code max character is 10"
+  }),
   biography: z.string(),
   interest: z.string(),
   skills: z.string(),
-  userId: z.string().cuid()
+  userId: z.string().cuid(),
+  role: z.nativeEnum(ROLES)
 })
 
 export { LoginSchema, RegisterSchema, RegisterProfileSchema }

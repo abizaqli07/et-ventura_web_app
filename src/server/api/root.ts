@@ -1,6 +1,6 @@
 import { createTRPCRouter } from "~/server/api/trpc";
 import { adminRouter } from "~/server/api/routers/admin/admin";
-import { clientRouter } from "~/server/api/routers/client/client";
+import { entrepreneurRouter } from "~/server/api/routers/user/entrepreneur";
 import { userAuthRouter } from "~/server/api/routers/auth/user_auth";
 
 /**
@@ -9,7 +9,7 @@ import { userAuthRouter } from "~/server/api/routers/auth/user_auth";
  * All routers added in /api/routers should be manually added here.
  */
 export const appRouter = createTRPCRouter({
-  client: clientRouter,
+  entrepreneur: entrepreneurRouter,
   admin: adminRouter,
   auth: userAuthRouter
 });

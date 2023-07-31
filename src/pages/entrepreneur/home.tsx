@@ -19,6 +19,7 @@ const home = () => {
       <div>User Profile</div>
       <div>Name : {user.data?.profile?.name}</div>
       <div>Name : {user.data?.profile?.address}</div>
+      <div>Role : {user.data?.role}</div>
     </div>
   )
 }

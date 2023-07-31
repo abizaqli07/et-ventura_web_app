@@ -1,19 +1,71 @@
 import { zodResolver } from "@hookform/resolvers/zod"
+import { ROLES } from "@prisma/client"
+import { GetServerSideProps } from "next"
+import { Session } from "next-auth"
 import { useSession } from "next-auth/react"
 import Head from "next/head"
+import { useRouter } from "next/router"
 import { useState } from "react"
 import { UseFormReturn, useForm } from "react-hook-form"
+import toast from "react-hot-toast"
 import { z } from "zod"
 import { RegisterProfileSchema } from "~/components/types/user_auth"
 import { Button } from "~/components/ui/button"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "~/components/ui/form"
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage
+} from "~/components/ui/form"
 import { Input } from "~/components/ui/input"
+import { RadioGroup, RadioGroupItem } from "~/components/ui/radio-group"
 import { Textarea } from "~/components/ui/textarea"
+import { getServerAuthSession } from "~/server/auth"
+import { api } from "~/utils/api"
 
+export const getServerSideProps: GetServerSideProps<{
+  session: Session
+}> = async (ctx) => {
+  const session = await getServerAuthSession({
+    req: ctx.req,
+    res: ctx.res
+  });
+
+  if (session === null || session === undefined) {
+    return {
+      redirect: {
+        destination: "/auth/login",
+        permanent: false,
+      }
+    }
+  }
+
+  return {
+    props: {
+      session
+    }
+  }
+}
 
 const RegisterProfile = () => {
   const [[page, direction], setPage] = useState([0, 0])
-  const session = useSession()
+
+  const session = useSession();
+  const router = useRouter();
+  
+  const { data, isError, isLoading } = api.client.home.getProfile.useQuery()
+
+  const createProfile = api.auth.createProfile.useMutation({
+    async onSuccess(data, variables, context) {
+      router.push("/entrepreneur/home").catch((e) => console.log(e))
+    },
+    onError(error) {
+      toast.error(error.message)
+    },
+  });
 
   const paginate = (newDirection: number) => {
     setPage([page + newDirection, newDirection]);
@@ -22,24 +74,24 @@ const RegisterProfile = () => {
   const form = useForm<z.infer<typeof RegisterProfileSchema>>({
     resolver: zodResolver(RegisterProfileSchema),
     defaultValues: {
-      username: "",
-      name: "",
-      address: "",
-      phone: "",
-      city: "",
-      country: "",
-      postCode: 0,
-      biography: "",
-      interest: "",
-      skills: "",
+      username: data?.profile?.username ?? "",
+      name: data?.profile?.name ?? "",
+      address: data?.profile?.address ?? "",
+      phone: data?.profile?.phone ?? "",
+      city: data?.profile?.city ?? "",
+      country: data?.profile?.country ?? "",
+      postCode: String(data?.profile?.postCode) ?? "",
+      biography: data?.profile?.biography ?? "",
+      interest: data?.profile?.interest ?? "",
+      skills: data?.profile?.skills ?? "",
+      role: data?.role,
       userId: session.data?.user.id
     },
-  })
+  });
 
   async function onSubmit(values: z.infer<typeof RegisterProfileSchema>) {
-    console.log(values)
+    createProfile.mutate(values)
   }
-
 
   return (
     <>
@@ -62,17 +114,19 @@ const RegisterProfile = () => {
             <Form {...form}>
               <form className="space-y-6" onSubmit={(event) => void form.handleSubmit(onSubmit)(event)}>
                 {(page === 0) && <PersonalData form={form} />}
-                {(page === 1) && <UserRole />}
+                {(page === 1) && <UserRole form={form} />}
                 {(page === 2) && <PurposeAndInterest form={form} />}
                 {(page === 3) && <Skills form={form} />}
+                <div>
+                  <Button type="button" onClick={() => paginate(-1)}>Previous</Button>
+                  <Button type="button" onClick={() => paginate(1)}>Next</Button>
+                  <Button type="submit" className={page === 3 ? "" : "hidden"}>Submit</Button>
+                </div>
               </form>
             </Form>
           </div>
         </div>
-        <div>
-          <Button onClick={() => paginate(-1)}>Previous</Button>
-          <Button onClick={() => paginate(1)}>Next</Button>
-        </div>
+
       </main>
     </>
   )
@@ -86,11 +140,12 @@ const PersonalData = ({ form }: {
     address: string;
     city: string;
     country: string;
-    postCode: number;
+    postCode: string;
     biography: string;
     interest: string;
     skills: string;
     userId: string;
+    role: ROLES;
   }, any, undefined>
 }) => {
   return (
@@ -237,11 +292,63 @@ const PersonalData = ({ form }: {
   )
 }
 
-const UserRole = () => {
+const UserRole = ({ form }: {
+  form: UseFormReturn<{
+    username: string;
+    name: string;
+    phone: string;
+    address: string;
+    city: string;
+    country: string;
+    postCode: string;
+    biography: string;
+    interest: string;
+    skills: string;
+    userId: string;
+    role: ROLES;
+  }, any, undefined>
+}) => {
   return (
     <>
-      <div>Entrepreneur</div>
-      <div>Investor</div>
+      <div>
+        <FormField
+          control={form.control}
+          name="role"
+          render={({ field }) => (
+            <FormItem className="space-y-3">
+              <FormLabel>Notify me about...</FormLabel>
+              <FormControl>
+                <RadioGroup
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                  className="flex flex-col space-y-1"
+                >
+
+                  <FormItem className="flex items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <RadioGroupItem value={ROLES.ENTREPRENEUR} />
+                    </FormControl>
+                    <FormLabel className="font-normal">
+                      Entrepreneure
+                    </FormLabel>
+                  </FormItem>
+
+                  <FormItem className="flex items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <RadioGroupItem value={ROLES.INVESTOR} />
+                    </FormControl>
+                    <FormLabel className="font-normal">
+                      Investor
+                    </FormLabel>
+                  </FormItem>
+
+                </RadioGroup>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
     </>
   )
 }
@@ -254,11 +361,12 @@ const PurposeAndInterest = ({ form }: {
     address: string;
     city: string;
     country: string;
-    postCode: number;
+    postCode: string;
     biography: string;
     interest: string;
     skills: string;
     userId: string;
+    role: ROLES;
   }, any, undefined>
 }) => {
   return (
@@ -320,11 +428,12 @@ const Skills = ({ form }: {
     address: string;
     city: string;
     country: string;
-    postCode: number;
+    postCode: string;
     biography: string;
     interest: string;
     skills: string;
     userId: string;
+    role: ROLES;
   }, any, undefined>
 }) => {
   return (

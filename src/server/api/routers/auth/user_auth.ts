@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { hash } from "bcrypt"
-import { RegisterSchema } from "~/components/types/user_auth";
+import { RegisterProfileSchema, RegisterSchema } from "~/components/types/user_auth";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
 /**
@@ -39,4 +39,53 @@ export const userAuthRouter = createTRPCRouter({
       return user
 
     }),
+  createProfile: publicProcedure
+    .input(RegisterProfileSchema)
+    .mutation(async ({ input, ctx }) => {
+
+      const profile = await ctx.prisma.userProfile.upsert({
+        create: {
+          username: input.username,
+          name: input.name,
+          phone: input.phone,
+          address: input.address,
+          city: input.city,
+          country: input.country,
+          postCode: Number(input.postCode),
+          biography: input.biography,
+          interest: input.interest,
+          skills: input.skills,
+          userId: input.userId,
+        },
+        update: {
+          username: input.username,
+          name: input.name,
+          phone: input.phone,
+          address: input.address,
+          city: input.city,
+          country: input.country,
+          postCode: Number(input.postCode),
+          biography: input.biography,
+          interest: input.interest,
+          skills: input.skills,
+        },
+        where: {
+          userId: input.userId
+        }
+      });
+
+      if (profile) {
+        const update = await ctx.prisma.user.update({
+          where: {
+            id: input.userId
+          },
+          data: {
+            role: input.role
+          }
+        })
+      }
+
+      return profile
+
+    })
 });
