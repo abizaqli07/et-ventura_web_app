@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { ROLES } from "@prisma/client"
+import { ROLES, User, UserProfile } from "@prisma/client"
 import { GetServerSideProps } from "next"
 import { Session } from "next-auth"
 import { useSession } from "next-auth/react"
@@ -26,6 +26,11 @@ import { Textarea } from "~/components/ui/textarea"
 import { getServerAuthSession } from "~/server/auth"
 import { api } from "~/utils/api"
 
+type Props = {
+  userData: UserProfile | null | undefined,
+  userRole: ROLES
+}
+
 export const getServerSideProps: GetServerSideProps<{
   session: Session
 }> = async (ctx) => {
@@ -51,12 +56,20 @@ export const getServerSideProps: GetServerSideProps<{
 }
 
 const RegisterProfile = () => {
+  const { data, isError, isLoading } = api.entrepreneur.home.getProfile.useQuery()
+
+  if (isLoading || data?.role == undefined) return;
+
+  return (
+    <Profile userData={data?.profile} userRole={data?.role} />
+  )
+}
+
+const Profile = ({ userData, userRole }: Props) => {
   const [[page, direction], setPage] = useState([0, 0])
 
   const session = useSession();
   const router = useRouter();
-  
-  const { data, isError, isLoading } = api.client.home.getProfile.useQuery()
 
   const createProfile = api.auth.createProfile.useMutation({
     async onSuccess(data, variables, context) {
@@ -74,17 +87,17 @@ const RegisterProfile = () => {
   const form = useForm<z.infer<typeof RegisterProfileSchema>>({
     resolver: zodResolver(RegisterProfileSchema),
     defaultValues: {
-      username: data?.profile?.username ?? "",
-      name: data?.profile?.name ?? "",
-      address: data?.profile?.address ?? "",
-      phone: data?.profile?.phone ?? "",
-      city: data?.profile?.city ?? "",
-      country: data?.profile?.country ?? "",
-      postCode: String(data?.profile?.postCode) ?? "",
-      biography: data?.profile?.biography ?? "",
-      interest: data?.profile?.interest ?? "",
-      skills: data?.profile?.skills ?? "",
-      role: data?.role,
+      username: userData?.username ?? "",
+      name: userData?.name ?? "",
+      address: userData?.address ?? "",
+      phone: userData?.phone ?? "",
+      city: userData?.city ?? "",
+      country: userData?.country ?? "",
+      postCode: String(userData?.postCode) ?? "",
+      biography: userData?.biography ?? "",
+      interest: userData?.interest ?? "",
+      skills: userData?.skills ?? "",
+      role: userRole,
       userId: session.data?.user.id
     },
   });
